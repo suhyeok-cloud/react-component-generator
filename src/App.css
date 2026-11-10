@@ -1,0 +1,693 @@
+:root {
+  --desk: #3b7f7c;
+  --chrome: #dcd8cc;
+  --chrome-hi: #fffdf5;
+  --chrome-lo: #a8a496;
+  --chrome-dk: #3d3b36;
+  --paper: #fffef9;
+  --ink: #1c1b22;
+  --ink-soft: #55525c;
+  --title-a: #2d2f8c;
+  --title-b: #6b4bb5;
+  --marker: #f4c542;
+  --marker-dk: #d9a81c;
+  --ok: #1f7a3a;
+  --danger: #b3261e;
+
+  --font-pixel: 'DotGothic16', 'IBM Plex Sans KR', monospace;
+  --font-mono: 'IBM Plex Mono', Consolas, monospace;
+
+  --bevel-out:
+    inset -1px -1px 0 var(--chrome-dk), inset 1px 1px 0 var(--chrome-hi),
+    inset -2px -2px 0 var(--chrome-lo);
+  --bevel-in:
+    inset 1px 1px 0 var(--chrome-dk), inset -1px -1px 0 var(--chrome-hi),
+    inset 2px 2px 0 var(--chrome-lo);
+  --drop: 4px 4px 0 rgba(20, 20, 30, 0.38);
+}
+
+:focus-visible {
+  outline: 2px dashed var(--ink);
+  outline-offset: 2px;
+}
+
+.app {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  padding: 36px 28px 0;
+}
+
+/* ───────── 바탕화면 헤드라인 ───────── */
+.app-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 30px;
+}
+
+.header-copy {
+  min-width: 0;
+}
+
+.header-copy h1 {
+  color: #fffdf5;
+  font-family: var(--font-pixel);
+  font-size: clamp(1.9rem, 4.4vw, 3.2rem);
+  font-weight: 400;
+  line-height: 1.15;
+  text-shadow:
+    3px 3px 0 var(--title-a),
+    6px 6px 0 rgba(20, 20, 30, 0.35);
+  word-break: keep-all;
+}
+
+.header-copy p {
+  max-width: 52ch;
+  margin-top: 16px;
+  color: #eaf5f2;
+  font-size: 0.98rem;
+  line-height: 1.7;
+  word-break: keep-all;
+}
+
+.header-meta {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 10px;
+}
+
+.header-meta div {
+  min-width: 108px;
+  padding: 8px 12px;
+  background: var(--chrome);
+  box-shadow: var(--bevel-in);
+}
+
+.header-meta span {
+  display: block;
+  color: var(--ink-soft);
+  font-size: 0.74rem;
+}
+
+.header-meta strong {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-pixel);
+  font-size: 1.05rem;
+  font-weight: 400;
+}
+
+/* ───────── 창 공통 ───────── */
+.window,
+.composer-panel,
+.settings-panel,
+.component-card,
+.empty-state,
+.loading-card {
+  background: var(--chrome);
+  box-shadow: var(--bevel-out), var(--drop);
+  padding: 3px;
+}
+
+.titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 28px;
+  padding: 3px 4px 3px 10px;
+  background: linear-gradient(90deg, var(--title-a), var(--title-b));
+  color: #ffffff;
+  font-family: var(--font-pixel);
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+}
+
+.titlebar-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.titlebar-ctrl {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 3px;
+}
+
+.titlebar-ctrl i {
+  display: block;
+  width: 18px;
+  height: 18px;
+  background: var(--chrome);
+  box-shadow: var(--bevel-out);
+}
+
+.window-body {
+  padding: 20px;
+}
+
+/* ───────── 작업 영역 ───────── */
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 24px;
+  align-items: start;
+  margin-bottom: 30px;
+}
+
+.prompt-heading {
+  margin-bottom: 14px;
+}
+
+.prompt-heading h2,
+.settings-body h2,
+.results-header h2,
+.empty-copy h2 {
+  font-family: var(--font-pixel);
+  font-size: 1.3rem;
+  font-weight: 400;
+  line-height: 1.3;
+  word-break: keep-all;
+}
+
+/* 입력 필드 (움푹 들어간 면) */
+.provider-select select,
+.api-key-field input,
+.prompt-textarea {
+  width: 100%;
+  background: var(--paper);
+  border: 0;
+  border-radius: 0;
+  box-shadow: var(--bevel-in);
+  color: var(--ink);
+}
+
+.provider-select label,
+.api-key-input label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.provider-select,
+.api-key-input {
+  margin-top: 16px;
+}
+
+.provider-select select {
+  height: 38px;
+  padding: 0 10px;
+  cursor: pointer;
+}
+
+.api-key-field {
+  display: flex;
+  gap: 8px;
+}
+
+.api-key-field input {
+  min-width: 0;
+  height: 38px;
+  padding: 0 10px;
+  font-family: var(--font-mono);
+  font-size: 0.84rem;
+}
+
+.prompt-textarea {
+  min-height: 150px;
+  padding: 14px 16px;
+  resize: vertical;
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.prompt-textarea::placeholder,
+.api-key-field input::placeholder {
+  color: #8a8693;
+}
+
+/* 버튼 (튀어나온 면) */
+.btn-toggle-key,
+.btn-clear,
+.btn-refresh,
+.btn-regenerate,
+.btn-remove,
+.btn-copy,
+.btn-generate,
+.example-chip,
+.tab {
+  background: var(--chrome);
+  border: 0;
+  border-radius: 0;
+  box-shadow: var(--bevel-out);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.btn-toggle-key,
+.btn-clear,
+.btn-refresh,
+.btn-regenerate,
+.btn-remove,
+.btn-copy {
+  min-height: 32px;
+  padding: 0 14px;
+  font-size: 0.86rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.btn-refresh {
+  width: 34px;
+  padding: 0;
+  font-size: 1.05rem;
+}
+
+.btn-toggle-key:active,
+.btn-clear:active,
+.btn-refresh:active,
+.btn-regenerate:active:not(:disabled),
+.btn-remove:active,
+.btn-copy:active,
+.btn-generate:active:not(:disabled),
+.example-chip:active {
+  box-shadow: var(--bevel-in);
+  transform: translate(1px, 1px);
+}
+
+.btn-remove:hover,
+.btn-clear:hover {
+  color: var(--danger);
+}
+
+.btn-regenerate:disabled,
+.btn-generate:disabled {
+  color: #7d7a72;
+  cursor: not-allowed;
+  text-shadow: 1px 1px 0 var(--chrome-hi);
+}
+
+.key-status {
+  margin-top: 10px;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.key-status--ready {
+  color: var(--ok);
+  font-weight: 500;
+}
+
+/* ───────── 프롬프트 ───────── */
+.prompt-form {
+  display: grid;
+  gap: 12px;
+}
+
+.btn-generate {
+  justify-self: end;
+  height: 44px;
+  padding: 0 28px;
+  background: var(--marker);
+  font-family: var(--font-pixel);
+  font-size: 1.05rem;
+  box-shadow:
+    inset -1px -1px 0 var(--chrome-dk), inset 1px 1px 0 #fff3b8,
+    inset -2px -2px 0 var(--marker-dk);
+}
+
+.btn-generate:disabled {
+  background: var(--chrome);
+  box-shadow: var(--bevel-out);
+}
+
+.loading-spinner {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.prompt-examples {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 2px groove var(--chrome-hi);
+}
+
+.examples-label {
+  grid-column: 1 / -1;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.example-chip {
+  min-height: 64px;
+  padding: 10px 12px;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  text-align: left;
+  word-break: keep-all;
+}
+
+.example-chip:hover {
+  background: var(--chrome-hi);
+}
+
+/* ───────── 알림·상태 ───────── */
+.error-banner {
+  margin-bottom: 24px;
+  padding: 12px 16px;
+  background: #fbe9e5;
+  box-shadow: var(--bevel-in);
+  border-left: 8px solid var(--danger);
+}
+
+.error-banner p {
+  color: #7a1912;
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.results-section {
+  min-height: 320px;
+  padding-bottom: 28px;
+}
+
+.results-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 12px;
+  margin-bottom: 20px;
+  background: var(--chrome);
+  box-shadow: var(--bevel-out);
+}
+
+.empty-state {
+  max-width: 560px;
+}
+
+.empty-state .window-body {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+.empty-icon {
+  flex: 0 0 auto;
+  width: 64px;
+  height: 76px;
+  background: var(--paper);
+  box-shadow: var(--bevel-in);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-pixel);
+  font-size: 1.6rem;
+  color: var(--title-a);
+}
+
+.empty-copy p {
+  margin-top: 6px;
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+  line-height: 1.65;
+  word-break: keep-all;
+}
+
+/* 블록형 진행 막대 — 이 페이지에서 유일하게 스스로 움직이는 요소 */
+.loading-card {
+  margin-bottom: 24px;
+}
+
+.loading-card .window-body {
+  display: grid;
+  gap: 12px;
+}
+
+.loading-card p {
+  font-size: 0.92rem;
+}
+
+.progress {
+  height: 24px;
+  padding: 3px;
+  overflow: hidden;
+  background: var(--paper);
+  box-shadow: var(--bevel-in);
+}
+
+.progress-run {
+  display: block;
+  width: 40%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--title-a) 0 12px,
+    transparent 12px 15px
+  );
+  animation: progress-run 1.6s steps(14, end) infinite;
+}
+
+@keyframes progress-run {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
+/* ───────── 결과 카드 ───────── */
+.results-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: center;
+  padding: 14px 16px;
+}
+
+.card-title-group {
+  min-width: 0;
+}
+
+.card-prompt {
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.55;
+  word-break: keep-all;
+}
+
+.card-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.card-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 12px;
+  border-bottom: 2px solid var(--chrome-hi);
+}
+
+.tab {
+  min-height: 34px;
+  padding: 0 22px;
+  margin-bottom: -2px;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.tab--active {
+  position: relative;
+  min-height: 38px;
+  background: var(--chrome);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow:
+    inset 1px 1px 0 var(--chrome-hi), inset -1px 0 0 var(--chrome-dk),
+    inset -2px 0 0 var(--chrome-lo);
+}
+
+.tab--active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 3px;
+  background: var(--chrome);
+}
+
+.card-content {
+  margin: 0 12px 12px;
+  min-height: 280px;
+  background: var(--paper);
+  box-shadow: var(--bevel-in);
+}
+
+.preview-panel,
+.code-panel {
+  height: 100%;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 42px;
+  padding: 6px 12px;
+  background: var(--chrome);
+  border-bottom: 2px groove var(--chrome-hi);
+}
+
+.panel-header h3 {
+  font-family: var(--font-pixel);
+  font-size: 0.95rem;
+  font-weight: 400;
+}
+
+.preview-content {
+  padding: 12px;
+}
+
+.preview-render {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 320px;
+  padding: 32px;
+  background-color: #f4f1e6;
+  background-image:
+    linear-gradient(rgba(60, 59, 80, 0.09) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(60, 59, 80, 0.09) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.preview-error {
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: #fbe9e5;
+  border-left: 8px solid var(--danger);
+  color: #7a1912;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.btn-copy {
+  background: var(--marker);
+  box-shadow:
+    inset -1px -1px 0 var(--chrome-dk), inset 1px 1px 0 #fff3b8,
+    inset -2px -2px 0 var(--marker-dk);
+}
+
+.code-block {
+  min-height: 320px;
+  margin: 0;
+  padding: 20px 22px;
+  overflow-x: auto;
+  background: #16151d;
+  color: #f2e9c9;
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  line-height: 1.7;
+}
+
+/* ───────── 하단 상태 표시줄 ───────── */
+.statusbar {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 6px 16px;
+  background: var(--chrome);
+  box-shadow: inset 0 2px 0 var(--chrome-hi), 0 -2px 0 var(--chrome-dk);
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+}
+
+.statusbar strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ───────── 반응형 ───────── */
+@media (max-width: 1000px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .app {
+    padding: 24px 14px 0;
+  }
+
+  .app-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .header-meta div {
+    flex: 1;
+  }
+
+  .window-body {
+    padding: 14px;
+  }
+
+  .prompt-examples {
+    grid-template-columns: 1fr;
+  }
+
+  .btn-generate {
+    width: 100%;
+  }
+
+  .card-header,
+  .card-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .empty-state .window-body {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .preview-render {
+    min-height: 240px;
+    padding: 16px;
+  }
+
+  .statusbar {
+    flex-direction: column;
+    gap: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress-run {
+    animation: none;
+    width: 100%;
+  }
+}
