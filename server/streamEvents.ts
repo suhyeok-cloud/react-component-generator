@@ -33,13 +33,18 @@ export async function* buildStreamEvents(source: AsyncIterable<StreamDelta>): As
       if (delta.finished) finished = true;
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    yield { type: 'error', error: classifyError(message).message };
+    yield { type: 'error', error: classifyError(err).message };
     return;
   }
 
   if (!finished) {
     yield { type: 'error', error: '응답이 중간에 끊겼습니다. 다시 시도해주세요.' };
+    return;
+  }
+
+  // 안전 필터 등으로 텍스트 없이 종료된 경우 빈 컴포넌트가 저장되지 않게 막는다.
+  if (!text.trim()) {
+    yield { type: 'error', error: '생성된 응답이 비어 있습니다. 다시 시도해주세요.' };
     return;
   }
 

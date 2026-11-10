@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { PromptInput } from './components/PromptInput';
 import { ComponentCard } from './components/ComponentCard';
 import { StreamingCard } from './components/StreamingCard';
@@ -33,13 +33,17 @@ function App() {
 
   const hasEnvKey = envKeys[provider];
 
-  const handleGenerate = (prompt: string) => {
-    if (!apiKey.trim() && !hasEnvKey) {
-      alert(`${PROVIDER_CONFIG[provider].label} API 키를 입력하거나 .env에 설정해주세요.`);
-      return;
-    }
-    generate(prompt, apiKey || undefined, provider);
-  };
+  // 스트리밍 중 리렌더에도 참조가 유지돼야 memo된 ComponentCard가 다시 그려지지 않는다.
+  const handleGenerate = useCallback(
+    (prompt: string) => {
+      if (!apiKey.trim() && !hasEnvKey) {
+        alert(`${PROVIDER_CONFIG[provider].label} API 키를 입력하거나 .env에 설정해주세요.`);
+        return;
+      }
+      generate(prompt, apiKey || undefined, provider);
+    },
+    [apiKey, hasEnvKey, provider, generate],
+  );
 
   const handleProviderChange = (newProvider: Provider) => {
     setProvider(newProvider);

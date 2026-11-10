@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import type { GeneratedComponent } from '../types';
 import { LivePreview } from './LivePreview';
 import { CodeView } from './CodeView';
@@ -14,7 +14,14 @@ interface ComponentCardProps {
 
 type Tab = 'preview' | 'code';
 
-export function ComponentCard({ component, onRemove, onRegenerate, onExportGist, isLoading }: ComponentCardProps) {
+// 스트리밍 중 App이 리렌더돼도 props가 같은 카드는 다시 그리지 않도록 memo로 감싼다.
+export const ComponentCard = memo(function ComponentCard({
+  component,
+  onRemove,
+  onRegenerate,
+  onExportGist,
+  isLoading,
+}: ComponentCardProps) {
   const [activeTab, setActiveTab] = useState<Tab>('preview');
   const [previewKey, setPreviewKey] = useState(0);
   const [isExporting, setIsExporting] = useState(false);
@@ -101,4 +108,4 @@ export function ComponentCard({ component, onRemove, onRegenerate, onExportGist,
       </div>
     </div>
   );
-}
+});

@@ -27,7 +27,7 @@
 
 - 생성 코드 계약: 시스템 프롬프트(`server/index.ts:7-20`)의 "import 금지, 전역 React, 마지막에 `render(<Name />)`, TypeScript 문법 금지"는 `LivePreview`의 `noInline` 렌더링(`src/components/LivePreview.tsx:14`) 및 `ensureRenderCall`(`server/generator.ts:16`)과 한 세트다. 프롬프트나 렌더 방식을 바꿀 때는 세 곳을 함께 수정한다.
 - 에러 분류는 메시지 문자열 매칭이다 (`message.includes('503')`, `'429'`, `server/index.ts:194`, `server/index.ts:201`). 프로바이더 에러 메시지는 `... error: ${status}` 형식을 유지해야 매핑이 동작한다 (`server/index.ts:85`, `server/index.ts:112`).
-- API 포트 3002는 `server/index.ts:139`와 `vite.config.ts:11` 두 곳에 있다. 한쪽만 바꾸지 않는다.
+- API 포트 3002는 `server/index.ts`의 `Bun.serve`와 `vite.config.ts`의 프록시 `target` 두 곳에 있다. 한쪽만 바꾸지 않는다. 서버는 `127.0.0.1`에만 바인딩하므로 프록시 `target`도 `localhost`가 아니라 `127.0.0.1`을 쓴다(`localhost`가 `::1`로 해석되면 연결이 거부된다).
 - 프로바이더 추가/변경 시 `server/index.ts:57`(`Provider`), `server/index.ts:59`(`ENV_KEYS`), `src/types/index.ts:1`(`Provider`), `src/App.tsx:9`(`PROVIDER_CONFIG`)를 모두 맞춘다. 타입이 서버/클라이언트에 중복 정의되어 있다.
 
 ### Asymmetry

@@ -14,6 +14,13 @@ describe('StreamingCard', () => {
     expect(screen.getByRole('tab', { name: '코드' })).toHaveAttribute('aria-selected', 'true');
   });
 
+  it('상태 안내(role=status)는 생성 중 라벨만 담고 코드는 포함하지 않는다', () => {
+    render(<StreamingCard prompt="파란 버튼" code="const Button = () =>" />);
+    const status = screen.getByRole('status');
+    expect(status).toHaveTextContent('생성 중');
+    expect(status).not.toHaveTextContent('const Button');
+  });
+
   it('생성이 끝나기 전에는 미리보기 탭을 쓸 수 없다', () => {
     render(<StreamingCard prompt="파란 버튼" code="" />);
     expect(screen.getByRole('tab', { name: '미리보기' })).toBeDisabled();
