@@ -3,6 +3,7 @@ import { PromptInput } from './components/PromptInput';
 import { ComponentCard } from './components/ComponentCard';
 import { TitleBar } from './components/TitleBar';
 import { useComponentGenerator } from './hooks/useComponentGenerator';
+import { loadApiKeys, loadProvider, saveApiKey, saveProvider } from './utils/storage';
 import type { Provider } from './types';
 import './App.css';
 
@@ -12,14 +13,14 @@ const PROVIDER_CONFIG = {
 } as const;
 
 function App() {
-  const [apiKey, setApiKey] = useState('');
+  const [provider, setProvider] = useState<Provider>(() => loadProvider(localStorage) ?? 'google');
+  const [apiKey, setApiKey] = useState(() => loadApiKeys(localStorage)[provider] ?? '');
   const [showKey, setShowKey] = useState(false);
-  const [provider, setProvider] = useState<Provider>('google');
   const [envKeys, setEnvKeys] = useState<Record<Provider, boolean>>({
     anthropic: false,
     google: false,
   });
-  const { components, isLoading, error, generate, removeComponent, clearAll } =
+  const { components, history, isLoading, error, generate, removeComponent, clearAll, exportToGist } =
     useComponentGenerator();
 
   useEffect(() => {
@@ -41,7 +42,13 @@ function App() {
 
   const handleProviderChange = (newProvider: Provider) => {
     setProvider(newProvider);
-    setApiKey('');
+    saveProvider(localStorage, newProvider);
+    setApiKey(loadApiKeys(localStorage)[newProvider] ?? '');
+  };
+
+  const handleApiKeyChange = (value: string) => {
+    setApiKey(value);
+    saveApiKey(localStorage, provider, value);
   };
 
   const activeProvider = PROVIDER_CONFIG[provider].label;
@@ -69,7 +76,7 @@ function App() {
         <section className="composer-panel" aria-label="컴포넌트 생성">
           <TitleBar title="새 컴포넌트" />
           <div className="window-body">
-            <PromptInput onGenerate={handleGenerate} isLoading={isLoading} />
+            <PromptInput onGenerate={handleGenerate} isLoading={isLoading} history={history} />
           </div>
         </section>
 
@@ -99,7 +106,7 @@ function App() {
                 id="api-key"
                 type={showKey ? 'text' : 'password'}
                 value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
+                onChange={(e) => handleApiKeyChange(e.target.value)}
                 placeholder={
                   hasEnvKey
                     ? '서버 키 사용 중 (직접 입력으로 덮어쓰기 가능)'
@@ -172,6 +179,7 @@ function App() {
               component={component}
               onRemove={removeComponent}
               onRegenerate={handleGenerate}
+              onExportGist={exportToGist}
               isLoading={isLoading}
             />
           ))}

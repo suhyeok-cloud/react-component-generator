@@ -19,7 +19,7 @@
 - API 키 값을 응답, 로그, 에러 메시지, 클라이언트 코드로 내보내지 않는다. `/api/config`는 키 존재 여부(boolean)만 반환한다. 근거: `server/index.ts:59-62`, `server/index.ts:147-157`.
 - `.env`는 읽어서 출력하거나 커밋하지 않는다. 근거: `.gitignore:32`.
 - Google 호출은 API 키가 URL 쿼리에 포함된다 (`server/index.ts:99`). 이 URL이나 fetch 에러 객체 전체를 로그/응답에 넣지 않는다. 현재 에러는 `error: ${status}` 형태의 상태 코드만 노출한다 (`server/index.ts:112`).
-- 클라이언트가 입력한 키는 요청 본문으로만 전달하며 저장하지 않는다. 근거: `src/hooks/useComponentGenerator.ts:26`.
+- 클라이언트가 입력한 키는 서버로는 요청 본문으로만 전달한다. 서버는 키를 저장하지 않는다. 브라우저에서는 사용자 편의를 위해 `localStorage`(`rcg:apiKeys`, provider별)에 평문 저장한다 (`src/utils/storage.ts`). 이 키를 로그/URL/다른 저장소로 내보내지 않는다. 근거: `src/hooks/useComponentGenerator.ts:61`.
 
 ### Hard Constraints
 

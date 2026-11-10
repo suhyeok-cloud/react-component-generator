@@ -30,4 +30,5 @@ Vite + React 19 프론트엔드. `/api/*`는 서버 프록시를 통해서만 �
 - Do: 키 상태는 `envKeys`(서버 키 존재 여부)와 입력된 `apiKey` 둘 다 확인한다. 한쪽만 보면 안 된다 (`App.tsx:35`, 상태바 `App.tsx:184`).
 - Do: `ComponentCard`의 탭은 `role="tab"`/`aria-selected`를 유지한다 (`ComponentCard.tsx:55-`).
 - Don't: 미리보기 코드에서 `LivePreview`의 `key={previewKey}` 리마운트 방식을 제거하지 않는다. 새로고침 버튼이 이 키 증가에 의존한다 (`ComponentCard.tsx:18`).
-- Don't: 키 입력값을 `localStorage` 등에 저장하지 않는다. 프로바이더 변경 시 입력 키를 비우는 동작(`App.tsx` `handleProviderChange`)도 유지한다.
+- Do: 키 입력값은 `utils/storage.ts`의 `saveApiKey`로만 `localStorage`에 저장한다(provider별). 프로바이더 변경 시 입력 키는 새 provider의 저장된 키로 교체한다(`App.tsx` `handleProviderChange`). 다른 provider의 키가 입력창에 남으면 안 된다.
+- Do: `localStorage` 접근은 `utils/storage.ts`를 거친다. 읽기는 깨진 JSON/잘못된 형태를 기본값으로 처리하고, 쓰기 실패(용량 초과)는 던지지 않는다.

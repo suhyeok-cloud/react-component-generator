@@ -8,14 +8,24 @@ interface ComponentCardProps {
   component: GeneratedComponent;
   onRemove: (id: string) => void;
   onRegenerate: (prompt: string) => void;
+  onExportGist: (component: GeneratedComponent) => Promise<string | null>;
   isLoading: boolean;
 }
 
 type Tab = 'preview' | 'code';
 
-export function ComponentCard({ component, onRemove, onRegenerate, isLoading }: ComponentCardProps) {
+export function ComponentCard({ component, onRemove, onRegenerate, onExportGist, isLoading }: ComponentCardProps) {
   const [activeTab, setActiveTab] = useState<Tab>('preview');
   const [previewKey, setPreviewKey] = useState(0);
+  const [isExporting, setIsExporting] = useState(false);
+  const [gistUrl, setGistUrl] = useState<string | null>(null);
+
+  const handleExportGist = async () => {
+    if (!confirm('이 프롬프트와 코드를 비공개(secret) GitHub Gist로 업로드할까요?')) return;
+    setIsExporting(true);
+    setGistUrl(await onExportGist(component));
+    setIsExporting(false);
+  };
   const createdAt = component.createdAt.toLocaleTimeString('ko-KR', {
     hour: '2-digit',
     minute: '2-digit',
@@ -27,6 +37,11 @@ export function ComponentCard({ component, onRemove, onRegenerate, isLoading }: 
       <div className="card-header">
         <div className="card-title-group">
           <p className="card-prompt">{component.prompt}</p>
+          {gistUrl && (
+            <a href={gistUrl} target="_blank" rel="noreferrer">
+              Gist 열기
+            </a>
+          )}
         </div>
         <div className="card-actions">
           <button
@@ -43,6 +58,13 @@ export function ComponentCard({ component, onRemove, onRegenerate, isLoading }: 
             disabled={isLoading}
           >
             {isLoading ? '생성 중...' : '재생성'}
+          </button>
+          <button
+            className="btn-regenerate"
+            onClick={handleExportGist}
+            disabled={isExporting}
+          >
+            {isExporting ? '내보내는 중...' : 'Gist로 내보내기'}
           </button>
           <button
             className="btn-remove"

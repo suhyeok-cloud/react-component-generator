@@ -1,5 +1,6 @@
 import { stripCodeFences, ensureRenderCall } from './generator';
 import { withModelFallback } from './fallback';
+import { buildGistPayload, createGist } from './gist';
 
 // 우선순위 순서. 앞 모델이 실패하면 다음 모델로 폴백한다.
 const GOOGLE_MODELS = ['gemini-3.1-flash-lite', 'gemini-3.5-flash'];
@@ -209,6 +210,32 @@ const server = Bun.serve({
           { error: message },
           { status: 500, headers: CORS_HEADERS }
         );
+      }
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/gist') {
+      const token = process.env.GITHUB_TOKEN;
+      if (!token) {
+        return Response.json(
+          { error: 'GITHUB_TOKEN이 설정되지 않았습니다. .env에 gist 권한이 있는 토큰을 추가해주세요.' },
+          { status: 400, headers: CORS_HEADERS }
+        );
+      }
+
+      try {
+        const { prompt, code } = (await req.json()) as { prompt?: string; code?: string };
+        if (!prompt || !code) {
+          return Response.json(
+            { error: 'Prompt and code are required' },
+            { status: 400, headers: CORS_HEADERS }
+          );
+        }
+
+        const gistUrl = await createGist(token, buildGistPayload(prompt, code));
+        return Response.json({ url: gistUrl }, { headers: CORS_HEADERS });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        return Response.json({ error: message }, { status: 500, headers: CORS_HEADERS });
       }
     }
 
