@@ -7,11 +7,18 @@ import {
   saveComponents,
   saveHistory,
 } from '../utils/storage';
+import { consumeGenerateStream } from '../utils/generateStream';
+
+interface StreamingState {
+  prompt: string;
+  code: string;
+}
 
 interface UseComponentGeneratorReturn {
   components: GeneratedComponent[];
   history: string[];
   isLoading: boolean;
+  streaming: StreamingState | null;
   error: string | null;
   generate: (prompt: string, apiKey: string | undefined, provider: Provider) => Promise<void>;
   removeComponent: (id: string) => void;
@@ -25,6 +32,7 @@ export function useComponentGenerator(): UseComponentGeneratorReturn {
   const [history, setHistory] = useState<string[]>(() => loadHistory(localStorage));
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [streaming, setStreaming] = useState<StreamingState | null>(null);
 
   useEffect(() => {
     saveComponents(localStorage, components);
@@ -38,23 +46,27 @@ export function useComponentGenerator(): UseComponentGeneratorReturn {
     setIsLoading(true);
     setError(null);
 
+    setStreaming({ prompt, code: '' });
+
     try {
-      const res = await fetch('/api/generate', {
+      const res = await fetch('/api/generate/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt, ...(apiKey && { apiKey }), provider }),
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
+        // 프록시가 HTML 에러 페이지를 돌려주는 경우 JSON 파싱이 실패하므로 기본 메시지로 대체한다.
+        const data = await res.json().catch(() => ({}));
         throw new Error(data.error || 'Failed to generate component');
       }
+
+      const code = await consumeGenerateStream(res, (partial) => setStreaming({ prompt, code: partial }));
 
       const newComponent: GeneratedComponent = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         prompt,
-        code: data.code,
+        code,
         createdAt: new Date(),
       };
 
@@ -64,6 +76,7 @@ export function useComponentGenerator(): UseComponentGeneratorReturn {
       const message = err instanceof Error ? err.message : 'Unknown error';
       setError(message);
     } finally {
+      setStreaming(null);
       setIsLoading(false);
     }
   }, []);
@@ -103,5 +116,5 @@ export function useComponentGenerator(): UseComponentGeneratorReturn {
     }
   }, []);
 
-  return { components, history, isLoading, error, generate, removeComponent, clearAll, clearHistory, exportToGist };
+  return { components, history, isLoading, streaming, error, generate, removeComponent, clearAll, clearHistory, exportToGist };
 }
