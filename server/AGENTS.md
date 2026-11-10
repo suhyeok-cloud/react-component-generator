@@ -7,7 +7,8 @@ Bun 런타임에서 동작하는 AI API 프록시. 프론트엔드는 Vite 프�
 ## Tech Stack & Constraints
 
 - 외부 SDK 없이 전역 `fetch`로 프로바이더를 직접 호출한다. 근거: `index.ts:69`, `index.ts:101`, `package.json` dependencies에 AI SDK 없음. SDK를 추가하지 않는다.
-- 환경변수는 `process.env.ANTHROPIC_API_KEY`, `process.env.GOOGLE_API_KEY`만 사용한다 (`index.ts:59-62`).
+- 환경변수는 `process.env.ANTHROPIC_API_KEY`, `process.env.GOOGLE_API_KEY`, Gist 내보내기용 `process.env.GITHUB_TOKEN`만 사용한다. 토큰은 클라이언트로 보내거나 `/api/config`에 노출하지 않는다.
+- `/api/gist`는 항상 비공개(secret) Gist를 만든다 (`gist.ts` `buildGistPayload`). 공개로 바꾸지 않는다. 에러에는 상태 코드만 담는다 (`GitHub API error: ${status}`).
 - 서버 코드는 브라우저 번들에 들어가지 않는다. `src/`에서 `server/`를 import하지 않는다.
 
 ## Implementation Patterns

@@ -27,6 +27,23 @@ describe('PromptInput', () => {
     expect(screen.getByRole('button', { name: '생성 중...' })).toBeDisabled();
   });
 
+  describe('프롬프트 히스토리', () => {
+    it('히스토리 항목을 클릭하면 입력창에 채워진다', async () => {
+      const user = userEvent.setup();
+      render(<PromptInput onGenerate={vi.fn()} isLoading={false} history={['로그인 폼', '프로필 카드']} />);
+
+      await user.click(screen.getByRole('button', { name: '프로필 카드' }));
+
+      expect(screen.getByRole('textbox')).toHaveValue('프로필 카드');
+    });
+
+    it('히스토리가 없으면 최근 프롬프트 영역을 보여주지 않는다', () => {
+      render(<PromptInput onGenerate={vi.fn()} isLoading={false} history={[]} />);
+
+      expect(screen.queryByText('최근 프롬프트')).not.toBeInTheDocument();
+    });
+  });
+
   describe('500자 제한', () => {
     const tooLong = '가'.repeat(501);
 
