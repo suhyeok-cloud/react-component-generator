@@ -1,12 +1,14 @@
 import { stripCodeFences, ensureRenderCall } from './generator';
 import { withModelFallback } from './fallback';
 import { buildGistPayload, createGist } from './gist';
-import { classifyError } from './errors';
-import { formatSseEvent } from './sse';
+import { classifyError, UserFacingError } from './errors';
+import { buildCorsHeaders, isAllowedOrigin } from './cors';
+import { createConcurrencyLimiter } from './limiter';
 import { readDeltas } from './readDeltas';
 import { extractAnthropicDelta, extractGoogleDelta, type StreamDelta } from './streamDelta';
 import { buildStreamEvents } from './streamEvents';
-import { validateGenerateRequest } from './validation';
+import { createSseStream } from './streamResponse';
+import { isProvider, validateGenerateRequest } from './validation';
 
 // 우선순위 순서. 앞 모델이 실패하면 다음 모델로 폴백한다.
 const GOOGLE_MODELS = ['gemini-3.1-flash-lite', 'gemini-3.5-flash'];
@@ -55,11 +57,11 @@ const GradientButton = () => {
 
 render(<GradientButton />);`;
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-};
+// 서버 env 키로 비용이 발생하므로 동시에 진행할 수 있는 스트림 수를 제한한다.
+const MAX_CONCURRENT_STREAMS = 3;
+// 프로바이더가 응답 헤더를 주지 않고 멈춰도 동시 실행 슬롯이 무기한 점유되지 않게 한다.
+const CONNECT_TIMEOUT_MS = 20_000;
+const streamLimiter = createConcurrencyLimiter(MAX_CONCURRENT_STREAMS);
 
 type Provider = 'anthropic' | 'google';
 
@@ -128,7 +130,7 @@ async function callGoogleModel(prompt: string, apiKey: string, model: string): P
 
   const candidate = data.candidates?.[0];
   if (candidate?.finishReason === 'MAX_TOKENS') {
-    throw new Error('생성된 코드가 너무 길어 잘렸습니다. 더 간단한 컴포넌트를 요청해주세요.');
+    throw new UserFacingError('생성된 코드가 너무 길어 잘렸습니다. 더 간단한 컴포넌트를 요청해주세요.');
   }
 
   return (
@@ -213,11 +215,22 @@ async function streamGoogle(
 
 const server = Bun.serve({
   port: 3002,
+  // 로컬 개발용이므로 외부 인터페이스(LAN)에는 열지 않는다.
+  hostname: '127.0.0.1',
   // 모델 응답 사이 간격이 길어도 스트림이 끊기지 않도록 기본값(10초)보다 늘린다.
   idleTimeout: 60,
   async fetch(req) {
+    const origin = req.headers.get('origin');
+    // 모든 응답에 붙이는 CORS 헤더. 허용된 로컬 Origin만 반영한다(`*` 사용 안 함).
+    const cors = buildCorsHeaders(origin);
+
+    // 임의 웹페이지가 서버 env 키로 비용을 일으키지 못하게 cross-origin 요청을 거부한다.
+    if (!isAllowedOrigin(origin)) {
+      return Response.json({ error: 'Forbidden origin' }, { status: 403 });
+    }
+
     if (req.method === 'OPTIONS') {
-      return new Response(null, { headers: CORS_HEADERS });
+      return new Response(null, { headers: cors });
     }
 
     const url = new URL(req.url);
@@ -230,25 +243,29 @@ const server = Bun.serve({
             google: !!ENV_KEYS.google,
           },
         },
-        { headers: CORS_HEADERS }
+        { headers: cors }
       );
     }
 
     if (req.method === 'POST' && url.pathname === '/api/generate') {
       try {
         const { prompt, apiKey, provider = 'anthropic' } = (await req.json()) as {
-          prompt: string;
-          apiKey?: string;
-          provider?: Provider;
+          prompt?: unknown;
+          apiKey?: unknown;
+          provider?: unknown;
         };
 
-        const resolvedKey = resolveApiKey(provider, apiKey);
+        if (!isProvider(provider)) {
+          return Response.json({ error: 'Invalid provider' }, { status: 400, headers: cors });
+        }
+
+        const resolvedKey = resolveApiKey(provider, typeof apiKey === 'string' ? apiKey : undefined);
 
         const validationError = validateGenerateRequest(prompt, resolvedKey, provider);
-        if (validationError || !resolvedKey) {
+        if (validationError || !resolvedKey || typeof prompt !== 'string') {
           return Response.json(
-            { error: validationError },
-            { status: 400, headers: CORS_HEADERS }
+            { error: validationError ?? 'Invalid request' },
+            { status: 400, headers: cors }
           );
         }
 
@@ -259,68 +276,81 @@ const server = Bun.serve({
 
         const code = ensureRenderCall(stripCodeFences(text));
 
-        return Response.json({ code }, { headers: CORS_HEADERS });
+        return Response.json({ code }, { headers: cors });
       } catch (err) {
-        const { status, message } = classifyError(err instanceof Error ? err.message : 'Unknown error');
-        return Response.json({ error: message }, { status, headers: CORS_HEADERS });
+        const { status, message } = classifyError(err);
+        return Response.json({ error: message }, { status, headers: cors });
       }
     }
 
     if (req.method === 'POST' && url.pathname === '/api/generate/stream') {
       try {
         const { prompt, apiKey, provider = 'anthropic' } = (await req.json()) as {
-          prompt: string;
-          apiKey?: string;
-          provider?: Provider;
+          prompt?: unknown;
+          apiKey?: unknown;
+          provider?: unknown;
         };
 
-        const resolvedKey = resolveApiKey(provider, apiKey);
+        if (!isProvider(provider)) {
+          return Response.json({ error: 'Invalid provider' }, { status: 400, headers: cors });
+        }
+
+        const resolvedKey = resolveApiKey(provider, typeof apiKey === 'string' ? apiKey : undefined);
 
         const validationError = validateGenerateRequest(prompt, resolvedKey, provider);
-        if (validationError || !resolvedKey) {
+        if (validationError || !resolvedKey || typeof prompt !== 'string') {
           return Response.json(
-            { error: validationError },
-            { status: 400, headers: CORS_HEADERS }
+            { error: validationError ?? 'Invalid request' },
+            { status: 400, headers: cors }
           );
         }
 
-        // 클라이언트가 연결을 끊으면(cancel) 프로바이더 요청도 중단한다.
+        const release = streamLimiter.acquire();
+        if (!release) {
+          return Response.json(
+            { error: '동시에 생성할 수 있는 요청 수를 초과했습니다. 잠시 후 다시 시도해주세요.' },
+            { status: 429, headers: cors }
+          );
+        }
+
+        // 클라이언트가 연결을 끊거나(연결 단계 포함) 프로바이더가 응답하지 않으면 업스트림을 중단한다.
         const upstream = new AbortController();
+        const abortUpstream = () => upstream.abort();
+        req.signal.addEventListener('abort', abortUpstream, { once: true });
+        const connectTimer = setTimeout(abortUpstream, CONNECT_TIMEOUT_MS);
 
         // 연결 단계 에러는 일반 JSON 에러로, 스트림 시작 후 에러는 error 이벤트로 전달한다.
-        const deltas =
-          provider === 'google'
-            ? await streamGoogle(prompt, resolvedKey, upstream.signal)
-            : await streamAnthropic(prompt, resolvedKey, upstream.signal);
+        let deltas: AsyncGenerator<StreamDelta>;
+        try {
+          deltas =
+            provider === 'google'
+              ? await streamGoogle(prompt, resolvedKey, upstream.signal)
+              : await streamAnthropic(prompt, resolvedKey, upstream.signal);
+        } catch (err) {
+          req.signal.removeEventListener('abort', abortUpstream);
+          release();
+          throw err;
+        } finally {
+          clearTimeout(connectTimer);
+        }
 
-        const encoder = new TextEncoder();
-        const body = new ReadableStream<Uint8Array>({
-          async start(controller) {
-            try {
-              for await (const event of buildStreamEvents(deltas)) {
-                controller.enqueue(encoder.encode(formatSseEvent(event)));
-              }
-              controller.close();
-            } catch {
-              // 클라이언트가 이미 끊어서 enqueue/close가 실패한 경우. 업스트림만 정리한다.
-              upstream.abort();
-            }
-          },
-          cancel() {
-            upstream.abort();
-          },
+        // 스트림이 끝나거나 취소되면 업스트림을 중단하고 동시 실행 슬롯을 반납한다.
+        const body = createSseStream(buildStreamEvents(deltas), () => {
+          req.signal.removeEventListener('abort', abortUpstream);
+          upstream.abort();
+          release();
         });
 
         return new Response(body, {
           headers: {
-            ...CORS_HEADERS,
+            ...cors,
             'Content-Type': 'text/event-stream; charset=utf-8',
             'Cache-Control': 'no-cache',
           },
         });
       } catch (err) {
-        const { status, message } = classifyError(err instanceof Error ? err.message : 'Unknown error');
-        return Response.json({ error: message }, { status, headers: CORS_HEADERS });
+        const { status, message } = classifyError(err);
+        return Response.json({ error: message }, { status, headers: cors });
       }
     }
 
@@ -329,7 +359,7 @@ const server = Bun.serve({
       if (!token) {
         return Response.json(
           { error: 'GITHUB_TOKEN이 설정되지 않았습니다. .env에 gist 권한이 있는 토큰을 추가해주세요.' },
-          { status: 400, headers: CORS_HEADERS }
+          { status: 400, headers: cors }
         );
       }
 
@@ -338,21 +368,21 @@ const server = Bun.serve({
         if (!prompt || !code) {
           return Response.json(
             { error: 'Prompt and code are required' },
-            { status: 400, headers: CORS_HEADERS }
+            { status: 400, headers: cors }
           );
         }
 
         const gistUrl = await createGist(token, buildGistPayload(prompt, code));
-        return Response.json({ url: gistUrl }, { headers: CORS_HEADERS });
+        return Response.json({ url: gistUrl }, { headers: cors });
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Unknown error';
-        return Response.json({ error: message }, { status: 500, headers: CORS_HEADERS });
+        return Response.json({ error: message }, { status: 500, headers: cors });
       }
     }
 
     return Response.json(
       { error: 'Not found' },
-      { status: 404, headers: CORS_HEADERS }
+      { status: 404, headers: cors }
     );
   },
 });

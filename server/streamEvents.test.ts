@@ -70,6 +70,34 @@ describe('buildStreamEvents', () => {
     expect(events.some((e) => e.type === 'done')).toBe(false);
   });
 
+  it('정상 종료됐지만 텍스트가 비어 있으면 빈 done 대신 error 이벤트로 끝낸다', async () => {
+    const events = await collect(buildStreamEvents(source(delta('', { finished: true }))));
+    expect(events).toEqual([{ type: 'error', error: '생성된 응답이 비어 있습니다. 다시 시도해주세요.' }]);
+  });
+
+  it('공백만 있는 응답도 비어 있는 것으로 본다', async () => {
+    const events = await collect(buildStreamEvents(source(delta('  \n ', { finished: true }))));
+    expect(events.at(-1)).toEqual({ type: 'error', error: '생성된 응답이 비어 있습니다. 다시 시도해주세요.' });
+  });
+
+  it('이미 render 호출이 있으면 중복으로 주입하지 않는다', async () => {
+    const code = 'const Card = () => null;\nrender(<Card />);';
+    const events = await collect(buildStreamEvents(source(delta(code, { finished: true }))));
+    expect(events.at(-1)).toEqual({ type: 'done', code });
+  });
+
+  it('코드 펜스가 여러 델타에 쪼개져 도착해도 누적 후 제거한다', async () => {
+    const events = await collect(
+      buildStreamEvents(
+        source(delta('``'), delta('`jsx\nconst Card = () => null;\n`'), delta('``', { finished: true })),
+      ),
+    );
+    expect(events.at(-1)).toEqual({
+      type: 'done',
+      code: 'const Card = () => null;\n\nrender(<Card />);',
+    });
+  });
+
   it('정상 종료 신호 없이 스트림이 끝나면 done 없이 error 이벤트로 끝낸다', async () => {
     const events = await collect(buildStreamEvents(source(delta('const A'))));
     expect(events.at(-1)).toEqual({ type: 'error', error: '응답이 중간에 끊겼습니다. 다시 시도해주세요.' });

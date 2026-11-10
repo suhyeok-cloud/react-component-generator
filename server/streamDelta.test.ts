@@ -30,14 +30,24 @@ describe('extractAnthropicDelta', () => {
     });
   });
 
-  it('스트림 도중 error 이벤트는 error 문구를 담아 반환한다', () => {
+  it('overloaded_error는 503으로 매핑해 과부하 안내로 분류되게 한다', () => {
     const data = JSON.stringify({ type: 'error', error: { type: 'overloaded_error', message: 'Overloaded' } });
     expect(extractAnthropicDelta(data)).toEqual({
       text: '',
       truncated: false,
       finished: false,
-      error: 'Claude API error: overloaded_error',
+      error: 'Claude API error: 503',
     });
+  });
+
+  it('rate_limit_error는 429로 매핑한다', () => {
+    const data = JSON.stringify({ type: 'error', error: { type: 'rate_limit_error' } });
+    expect(extractAnthropicDelta(data).error).toBe('Claude API error: 429');
+  });
+
+  it('그 외 error 타입은 타입 이름을 그대로 담는다', () => {
+    const data = JSON.stringify({ type: 'error', error: { type: 'api_error' } });
+    expect(extractAnthropicDelta(data).error).toBe('Claude API error: api_error');
   });
 });
 

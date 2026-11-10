@@ -12,6 +12,11 @@ export interface StreamDelta {
 
 const EMPTY: StreamDelta = { text: '', truncated: false, finished: false };
 
+const ANTHROPIC_ERROR_STATUS = new Map([
+  ['overloaded_error', '503'],
+  ['rate_limit_error', '429'],
+]);
+
 function parseJson(data: string): unknown {
   try {
     return JSON.parse(data);
@@ -34,7 +39,9 @@ export function extractAnthropicDelta(data: string): StreamDelta {
     return { ...EMPTY, finished: true };
   }
   if (event?.type === 'error') {
-    return { ...EMPTY, error: `Claude API error: ${event.error?.type ?? 'unknown'}` };
+    const type = event.error?.type ?? 'unknown';
+    // classifyError가 숫자 상태로 분류하므로 과부하·요청 과다는 상태 코드로 바꿔 담는다.
+    return { ...EMPTY, error: `Claude API error: ${ANTHROPIC_ERROR_STATUS.get(type) ?? type}` };
   }
   return EMPTY;
 }
