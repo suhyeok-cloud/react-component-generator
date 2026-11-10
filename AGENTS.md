@@ -18,6 +18,8 @@
 
 - API 키 값을 응답, 로그, 에러 메시지, 클라이언트 코드로 내보내지 않는다. `/api/config`는 키 존재 여부(boolean)만 반환한다. 근거: `server/index.ts:59-62`, `server/index.ts:147-157`.
 - `.env`는 읽어서 출력하거나 커밋하지 않는다. 근거: `.gitignore:32`.
+- 민감 파일 차단: `.env*`, `*credential*`, `*secret*`, `*.pem`, `*.key`, `*.p12`, `*.pfx`, `id_rsa*`, `id_ed25519*`, `.npmrc`, `.netrc`, `.aws/`, `.ssh/`, `.gnupg/`, `service-account*.json`은 읽기·수정·복사·이동·삭제를 모두 하지 않는다. `cat`, `Get-Content`, `grep` 등 셸 우회도 금지다. 근거: `.claude/settings.json`의 `permissions.deny`.
+- 민감 파일이 필요해 보이면 접근하지 말고 사용자에게 필요한 값(존재 여부, 변수 이름)만 물어본다. `permissions.deny` 항목을 임의로 제거·완화하지 않는다. 새 민감 파일 유형이 생기면 `settings.json`과 이 목록을 함께 갱신한다.
 - Google 호출은 API 키가 URL 쿼리에 포함된다 (`server/index.ts:99`). 이 URL이나 fetch 에러 객체 전체를 로그/응답에 넣지 않는다. 현재 에러는 `error: ${status}` 형태의 상태 코드만 노출한다 (`server/index.ts:112`).
 - 클라이언트가 입력한 키는 서버로는 요청 본문으로만 전달한다. 서버는 키를 저장하지 않는다. 브라우저에서는 사용자 편의를 위해 `localStorage`(`rcg:apiKeys`, provider별)에 평문 저장한다 (`src/utils/storage.ts`). 이 키를 로그/URL/다른 저장소로 내보내지 않는다. 근거: `src/hooks/useComponentGenerator.ts:61`.
 
